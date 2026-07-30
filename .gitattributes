@@ -1,0 +1,21 @@
+# Normalize line endings
+* text=auto
+
+# Python
+*.py text diff=python
+*.pyc binary
+
+# LaTeX
+*.tex text
+*.bib text
+*.cls text
+*.sty text
+
+# Markdown
+*.md text
+
+# Config
+*.json text
+*.txt text
+*.gitignore text
+*.gitattributes text

@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+*.toc
+*.fdb_latexmk
+*.fls
+*.bbl
+*.bcf
+*.blg
+*.run.xml
+*.synctex.gz
+_minted-*
+
+# PyInstaller build artifacts
+build/
+dist/
+*.spec
+
+# Generated
+*.pdf
+!examples/*.pdf
+figures/

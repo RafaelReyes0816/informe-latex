@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "md2tex"
+version = "0.1.0"
+description = "Conversor Markdown a LaTeX con interfaz gráfica"
+readme = "AGENTS.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Rafael Reyes", email = "rafaelreyes0816@gmail.com"},
+]
+keywords = ["latex", "markdown", "converter", "document-generation"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Text Processing :: Markup :: LaTeX",
+    "Topic :: Text Processing :: Markdown",
+]
+dependencies = [
+    "mistune>=3.0",
+    "customtkinter>=6.0",
+    "Pillow>=10.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/RafaelReyes0816/informe-latex"
+Repository = "https://github.com/RafaelReyes0816/informe-latex"
+Issues = "https://github.com/RafaelReyes0816/informe-latex/issues"
+
+[project.scripts]
+md2tex = "md2tex.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["md2tex*"]
+
+[tool.setuptools.package-data]
+md2tex = ["py.typed"]
