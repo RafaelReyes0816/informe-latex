@@ -60,6 +60,24 @@ python -m md2tex --cli            # terminal interactive menu
 - No `biber`/`bibliography` processing yet; `\cite{}` is emitted but `.bib` must be managed manually
 - GUI requires a display server (X11/Wayland). Headless → use `--cli`.
 
+## Releases
+
+Tag pushes (`v*`) trigger GitHub Actions to build standalone executables for Linux, Windows and macOS via PyInstaller.
+
+```bash
+make VERSION=0.2.0 tag    # create + push tag
+# or manually:
+git tag -a v0.2.0 -m "v0.2.0"
+git push origin v0.2.0
+```
+
+The workflow at `.github/workflows/release.yml` builds, uploads artifacts, and creates a GitHub Release with:
+- `md2tex-linux` / `md2tex-linux-cli`
+- `md2tex-windows.exe` / `md2tex-windows-cli.exe`
+- `md2tex-macos` / `md2tex-macos-cli`
+
+Bump version in `md2tex/__init__.py` and `pyproject.toml` before tagging.
+
 ## Common pitfalls
 
 - Do **not** commit build artifacts (`*.aux`, `*.log`, `*.out`, `*.toc`, `*.fdb_latexmk`, `*.fls`, `*.bbl`, `*.bcf`, `*.blg`, `*.run.xml`, `_minted-*`). Add to `.gitignore`.
