@@ -9,87 +9,83 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            name: linux
-            ext: ""
-          - os: windows-latest
-            name: windows
-            ext: ".exe"
-          - os: macos-latest
-            name: macos
-            ext: ""
-
-    runs-on: ${{ matrix.os }}
-
+  build-linux:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
       - name: Install dependencies
-        shell: bash
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt pyinstaller
-
-      - name: Build GUI binary
-        shell: bash
-        run: |
-          SEP=":"; [ "$RUNNER_OS" = "Windows" ] && SEP=";"
-          pyinstaller --onefile \
-            --name md2tex-${{ matrix.name }} \
-            --add-data "templates${SEP}templates" \
-            --noconsole \
-            md2tex/__main__.py
-
-      - name: Build CLI binary
-        shell: bash
-        run: |
-          SEP=":"; [ "$RUNNER_OS" = "Windows" ] && SEP=";"
-          pyinstaller --onefile \
-            --name md2tex-${{ matrix.name }}-cli \
-            --add-data "templates${SEP}templates" \
-            md2tex/__main__.py
-
-      - name: Upload GUI artifact
+      - name: Build binaries
+        run: python build.py binaries
+      - name: Build .deb installer
+        run: python build.py installer
+      - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: md2tex-${{ matrix.name }}
-          path: dist/md2tex-${{ matrix.name }}${{ matrix.ext }}
+          name: linux-installer
+          path: dist/md2tex_*.deb
 
-      - name: Upload CLI artifact
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+      - name: Build binaries + .dmg
+        run: python build.py all
+      - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: md2tex-${{ matrix.name }}-cli
-          path: dist/md2tex-${{ matrix.name }}-cli${{ matrix.ext }}
+          name: macos-installer
+          path: dist/md2tex-*.dmg
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress
+      - name: Build binaries
+        run: python build.py binaries
+      - name: Build .exe installer
+        run: python build.py installer
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: dist/md2tex-setup-v*.exe
 
   release:
-    needs: build
+    needs: [build-linux, build-macos, build-windows]
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: md2tex-*
+          pattern: *-installer
           merge-multiple: true
-
-      - name: List artifacts
-        run: ls -la
-
+      - name: List installers
+        run: ls -lh
       - uses: softprops/action-gh-release@v2
         with:
           files: |
-            md2tex-linux
-            md2tex-linux-cli
-            md2tex-windows.exe
-            md2tex-windows-cli.exe
-            md2tex-macos
-            md2tex-macos-cli
+            *.deb
+            *.dmg
+            *.exe
           generate_release_notes: true

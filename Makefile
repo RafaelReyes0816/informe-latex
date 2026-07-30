@@ -1,11 +1,10 @@
-.PHONY: install test clean build release tag
+.PHONY: install test clean build binaries installer all tag release
 
 VENV = .venv
 PYTHON = $(VENV)/bin/python
 PIP = $(VENV)/bin/pip
-PYINSTALLER = $(VENV)/bin/pyinstaller
 
-VERSION ?= 0.1.0
+VERSION ?= $(shell python3 -c "import sys; sys.path.insert(0,'.'); from md2tex import __version__; print(__version__)" 2>/dev/null || echo "0.1.0")
 
 install: $(VENV)
 	$(PIP) install -r requirements.txt
@@ -14,34 +13,24 @@ $(VENV):
 	python3 -m venv $(VENV)
 
 test: install
-	$(PYTHON) -c "from md2tex.converter import parse, _render_block; t, f = parse('# Hola'); assert 'section' in _render_block(t, {}, f); print('OK')"
+	$(PYTHON) -c "from md2tex.converter import parse, _render_block; t,f=parse('# Hola'); assert 'section' in _render_block(t,{},f); print('OK')"
 
 clean:
-	rm -rf build/ dist/ *.spec
-	rm -rf __pycache__ */__pycache__ */*/__pycache__
-	rm -rf .pytest_cache
+	python3 build.py clean
 
-build: install
-	$(PIP) install pyinstaller
-	$(PYINSTALLER) --onefile \
-		--name md2tex \
-		--add-data "templates:templates" \
-		--noconsole \
-		md2tex/__main__.py
+build: clean
+	python3 build.py binaries
 
-build-cli: install
-	$(PIP) install pyinstaller
-	$(PYINSTALLER) --onefile \
-		--name md2tex-cli \
-		--add-data "templates:templates" \
-		md2tex/__main__.py
+installer:
+	python3 build.py installer
 
-dist: build build-cli
-	@echo "Builds listos en dist/"
+all: clean
+	python3 build.py all
 
 tag:
 	git tag -a v$(VERSION) -m "v$(VERSION)"
 	git push origin v$(VERSION)
 
 release: tag
-	@echo "Crea el release en: https://github.com/RafaelReyes0816/informe-latex/releases/new"
+	@echo "GitHub Actions se encarga del resto."
+	@echo "Monitorea en: https://github.com/RafaelReyes0816/informe-latex/actions"
