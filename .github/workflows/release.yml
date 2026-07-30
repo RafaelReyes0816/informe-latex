@@ -34,32 +34,37 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
+        shell: bash
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt pyinstaller
 
-      - name: Build with PyInstaller
+      - name: Build GUI binary
+        shell: bash
         run: |
+          SEP=":"; [ "$RUNNER_OS" = "Windows" ] && SEP=";"
           pyinstaller --onefile \
             --name md2tex-${{ matrix.name }} \
-            --add-data "templates:templates" \
+            --add-data "templates${SEP}templates" \
             --noconsole \
             md2tex/__main__.py
 
-      - name: Build CLI variant
+      - name: Build CLI binary
+        shell: bash
         run: |
+          SEP=":"; [ "$RUNNER_OS" = "Windows" ] && SEP=";"
           pyinstaller --onefile \
             --name md2tex-${{ matrix.name }}-cli \
-            --add-data "templates:templates" \
+            --add-data "templates${SEP}templates" \
             md2tex/__main__.py
 
-      - name: Upload artifacts
+      - name: Upload GUI artifact
         uses: actions/upload-artifact@v4
         with:
           name: md2tex-${{ matrix.name }}
           path: dist/md2tex-${{ matrix.name }}${{ matrix.ext }}
 
-      - name: Upload CLI artifacts
+      - name: Upload CLI artifact
         uses: actions/upload-artifact@v4
         with:
           name: md2tex-${{ matrix.name }}-cli
@@ -75,7 +80,7 @@ jobs:
           pattern: md2tex-*
           merge-multiple: true
 
-      - name: Display structure
+      - name: List artifacts
         run: ls -la
 
       - uses: softprops/action-gh-release@v2
