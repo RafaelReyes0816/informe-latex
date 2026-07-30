@@ -2,6 +2,13 @@
 
 LaTeX project for reports and research documents.
 
+## Prerrequisitos del sistema
+
+- **Python ≥ 3.10** con tkinter (en Linux: `sudo apt install python3-tk`)
+- **LaTeX** (texlive): `sudo apt install texlive-latex-base texlive-latex-extra` (Linux), MacTeX (macOS), MiKTeX (Windows)
+- **latexmk**: incluido en texlive-latex-extra (Linux), MacTeX (macOS), o `mpm --install=latexmk` (Windows MiKTeX)
+- **Perl** (necesario para latexmk en Windows)
+
 ## Build
 
 ```bash

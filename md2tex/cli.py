@@ -105,6 +105,10 @@ def main():
     elif compile_choice and not has_latexmk_bin:
         print("  latexmk no está disponible. Compila manualmente con:")
         print(f"  $ latexmk -pdf {out_path.name}")
+        print("  Para instalar latexmk:")
+        print("    Linux:   sudo apt install texlive-latex-extra latexmk")
+        print("    macOS:   brew install texlive (o instalar MacTeX)")
+        print("    Windows: instalar MiKTeX y luego: mpm --install=latexmk")
 
     print()
     print("¡Listo!")

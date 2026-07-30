@@ -319,6 +319,11 @@ class ConfigPanel(ctk.CTkFrame):
                     self._log(r.stderr[-500:])
         except FileNotFoundError:
             self._log("⚠ latexmk no está instalado. Compila manualmente.")
+            msg = ("Instala latexmk:\n"
+                   "  Linux: sudo apt install texlive-latex-extra latexmk\n"
+                   "  macOS: brew install texlive  (o MacTeX)\n"
+                   "  Windows: MiKTeX → mpm --install=latexmk")
+            self._log(msg)
         except subprocess.TimeoutExpired:
             self._log("⚠ latexmk excedió el tiempo máximo.")
 

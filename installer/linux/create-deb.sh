@@ -24,6 +24,7 @@ Section: text
 Priority: optional
 Architecture: amd64
 Maintainer: Rafael Reyes <rafaelreyes0816@gmail.com>
+Depends: libc6 (>= 2.31), texlive-latex-base, texlive-latex-extra, texlive-binaries, latexmk
 Description: md2tex — Markdown to LaTeX converter
  Converts Markdown files into compilable LaTeX documents
  with automatic image handling, templates, and more.
@@ -45,6 +46,10 @@ EOF
 chmod 755 "$PKG_DIR/DEBIAN/postinst"
 
 install -m 755 "$BINARY" "$PKG_DIR/usr/bin/md2tex"
+CLI_BINARY="${BINARY}-cli"
+if [ -f "$CLI_BINARY" ]; then
+    install -m 755 "$CLI_BINARY" "$PKG_DIR/usr/bin/md2tex-cli"
+fi
 
 cat > "$PKG_DIR/usr/share/applications/md2tex.desktop" <<EOF
 [Desktop Entry]
