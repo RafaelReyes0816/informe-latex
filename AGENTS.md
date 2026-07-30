@@ -62,7 +62,7 @@ python -m md2tex --cli            # terminal interactive menu
 
 ## Releases
 
-Tag pushes (`v*`) trigger GitHub Actions to build standalone executables for Linux, Windows and macOS via PyInstaller.
+Tag pushes (`v*`) trigger GitHub Actions to build platform installers via PyInstaller + Inno Setup / DMG / dpkg-deb.
 
 ```bash
 make VERSION=0.2.0 tag    # create + push tag
@@ -71,10 +71,13 @@ git tag -a v0.2.0 -m "v0.2.0"
 git push origin v0.2.0
 ```
 
-The workflow at `.github/workflows/release.yml` builds, uploads artifacts, and creates a GitHub Release with:
-- `md2tex-linux` / `md2tex-linux-cli`
-- `md2tex-windows.exe` / `md2tex-windows-cli.exe`
-- `md2tex-macos` / `md2tex-macos-cli`
+The workflow at `.github/workflows/release.yml` builds and creates a GitHub Release with:
+
+| Platform | Format | File name |
+|---|---|---|
+| Linux | `.deb` | `md2tex_{version}_amd64.deb` |
+| macOS | `.dmg` | `md2tex-{version}.dmg` |
+| Windows | `.exe` (Inno Setup) | `md2tex-setup-v{version}.exe` |
 
 Bump version in `md2tex/__init__.py` and `pyproject.toml` before tagging.
 
