@@ -53,6 +53,15 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
 
 [Code]
+const
+  // Update this URL when MiKTeX publishes a new basic installer version.
+  // Check https://miktex.org/download for the latest "Installer" link.
+  MiKTeXUrl = 'https://miktex.org/download/ctan/systems/win32/miktex/setup/windows-x64/basic-miktex-25.12-x64.exe';
+
+function URLDownloadToFile(pCaller: Longint; szURL: string; szFileName: string;
+    dwReserved: Longint; lpfnCB: Longint): Integer;
+  external 'URLDownloadToFile@urlmon.dll stdcall';
+
 function LatexmkAvailable(): Boolean;
 var
   ResultCode: Integer;
@@ -65,18 +74,54 @@ begin
   end;
 end;
 
-function InitializeSetup(): Boolean;
+function InstallMiKTeX(): Boolean;
 var
-  ResultCode: Integer;
+  DownloadResult: Integer;
+  InstallResultCode: Integer;
+  InstallerPath: string;
+begin
+  Result := False;
+  InstallerPath := ExpandConstant('{tmp}\basic-miktex-x64.exe');
+
+  if not FileExists(InstallerPath) then
+  begin
+    MsgBox('Downloading MiKTeX Basic (~150 MB). This can take a few minutes...',
+           mbInformation, MB_OK);
+    DownloadResult := URLDownloadToFile(0, MiKTeXUrl, InstallerPath, 0, 0);
+    if DownloadResult <> 0 then
+    begin
+      MsgBox('Failed to download MiKTeX (error ' + IntToStr(DownloadResult) + ').' + #13#10 +
+             'You can install it later from https://miktex.org/download',
+             mbError, MB_OK);
+      Exit;
+    end;
+  end;
+
+  MsgBox('Installing MiKTeX. Please wait...', mbInformation, MB_OK);
+  if Exec(InstallerPath, '--unattended --private', '', SW_SHOW,
+      ewWaitUntilTerminated, InstallResultCode) then
+  begin
+    Result := (InstallResultCode = 0) or LatexmkAvailable();
+  end;
+
+  if not Result then
+  begin
+    MsgBox('MiKTeX installation did not complete successfully.' + #13#10 +
+           'You can install it manually from https://miktex.org/download',
+           mbError, MB_OK);
+  end;
+end;
+
+function InitializeSetup(): Boolean;
 begin
   if not LatexmkAvailable() then
   begin
-    if MsgBox('md2tex needs latexmk (from a LaTeX distribution like MiKTeX) ' +
-              'to compile PDFs, but it was not found on this system.' + #13#10 + #13#10 +
-              'Do you want to download MiKTeX now?', mbConfirmation, MB_YESNO) = IDYES then
+    if MsgBox('md2tex needs a LaTeX distribution (MiKTeX) to compile PDFs, ' +
+              'but it was not found on this system.' + #13#10 + #13#10 +
+              'Do you want to download and install MiKTeX Basic now? (~150 MB)',
+              mbConfirmation, MB_YESNO) = IDYES then
     begin
-      ShellExec('open', 'https://miktex.org/download', '', '', SW_SHOW,
-                ewNoWait, ResultCode);
+      InstallMiKTeX();
     end;
   end;
   Result := True;
