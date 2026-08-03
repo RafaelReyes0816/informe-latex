@@ -11,7 +11,9 @@ engine 'perl'`) por un mensaje claro al usuario.
 from __future__ import annotations
 
 import shutil
+import subprocess
 import sys
+from pathlib import Path
 
 # Herramientas que la cadena de compilación necesita tener en PATH.
 _TOOLS = ("latexmk", "perl", "pdflatex")
@@ -71,22 +73,91 @@ def missing_dependencies() -> list:
 def ensure_latex_dependencies() -> str:
     """Valida las dependencias antes de compilar.
 
-    - Si todo OK devuelve "" (cadena vacía).
-    - Si falta algo, devuelve un mensaje amigable con qué falta, cómo
-      instalarlo y el estado del entorno.
+    - Si hay un motor usable devuelve "" (cadena vacía).
+    - Si no, devuelve un mensaje amigable con qué falta, cómo instalarlo
+      y el estado del entorno.
+
+    Un motor es usable cuando (latexmk AND perl) OR (pdflatex). El backend
+    `pdflatex` (sin perl) se usa cuando falta perl, por lo que no es
+    estrictamente obligatorio.
     """
-    missing = missing_dependencies()
-    if not missing:
+    backend, _ = preferred_backend()
+    if backend is not None:
         return ""
 
     plat = _platform_key()
-    parts = ["No se puede compilar el PDF: faltan dependencias:"]
-    parts.append("  " + ", ".join(missing))
-    parts.append("")
-    parts.append("Cómo instalar lo que falta:")
-    for tool in missing:
-        parts.append("  · " + _HINTS.get(tool, {}).get(plat, f"Instale {tool}."))
+    parts = [
+        "No se puede compilar el PDF: no hay un motor de compilación disponible.",
+        "  Necesita latexmk+perl, o como mínimo pdflatex.",
+        "",
+        "Cómo instalar lo que falta:",
+    ]
+    for tool in ("latexmk", "pdflatex"):
+        if not which(tool):
+            parts.append("  · " + _HINTS.get(tool, {}).get(plat, f"Instale {tool}."))
     parts.append("")
     parts.append("Estado del entorno:")
     parts.append(status_report())
     return "\n".join(parts)
+
+
+def preferred_backend() -> tuple:
+    """Devuelve (backend, detalle) según lo disponible en el PATH.
+
+    Prioridad 1: ``latexmk`` + ``perl`` (máxima fidelidad, resuelve TOC/bib).
+    Prioridad 2: ``pdflatex`` (fallback, sin perl; 2 pasadas para TOC).
+    Si ninguno: (None, motivo).
+    """
+    deps = latex_dependencies()
+    if deps["latexmk"] and deps["perl"]:
+        return ("latexmk", "latexmk + perl disponibles")
+    if deps["pdflatex"]:
+        return ("pdflatex", "usando pdflatex (perl no disponible)")
+    return (None, "no se encontró latexmk ni pdflatex")
+
+
+def ensure_compile_available() -> str:
+    """Mensake amigable cuando no hay ningún motor de compilación usable."""
+    return ensure_latex_dependencies()
+
+
+def compile_pdf(tex_path, cwd=None) -> tuple:
+    """Compila ``tex_path`` a PDF dentro de ``cwd``.
+
+    Selecciona el backend disponible (latexmk preferido; pdflatex como
+    *fallback* cuando falta perl). Devuelve ``(ok, mensaje)``. El ``cwd``
+    debe ser el directorio donde vive el ``.tex`` (ahí resuelve
+    ``\\graphicspath{{figures/}}``).
+    """
+    tex_name = Path(tex_path).name
+    cwd = str(Path(cwd) if cwd else Path(tex_path).parent)
+
+    backend, detail = preferred_backend()
+    if backend is None:
+        return False, ensure_compile_available()
+
+    if backend == "latexmk":
+        cmd = ["latexmk", "-pdf", tex_name]
+        passes = 1
+    else:
+        cmd = ["pdflatex", "-interaction=nonstopmode", "-halt-on-error", tex_name]
+        passes = 2  # 2 pasadas para resolver la toc y referencias cruzadas
+
+    try:
+        for _ in range(passes):
+            res = subprocess.run(
+                cmd, cwd=cwd, stdin=subprocess.DEVNULL,
+                capture_output=True, text=True, timeout=300,
+            )
+    except subprocess.TimeoutExpired:
+        return False, "⚠ Compilación excedió el tiempo máximo (300 s)."
+    except FileNotFoundError:
+        return False, f"⚠ {backend} no está disponible en el PATH."
+
+    if res.returncode != 0:
+        tail = (res.stderr or res.stdout or "").strip()[-800:]
+        if tail:
+            tail = "\n" + tail
+        return False, f"⚠ Compilación fallida ({detail}).{tail}"
+
+    return True, f"📄 {Path(tex_path).stem}.pdf compilado ({detail})"

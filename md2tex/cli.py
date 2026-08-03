@@ -1,4 +1,3 @@
-import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -6,7 +5,7 @@ from pathlib import Path
 import questionary
 
 from .converter import parse, _render_block
-from .deps import ensure_latex_dependencies, status_report
+from .deps import compile_pdf, ensure_compile_available, status_report
 from .image_handler import handle_images
 from .template import build_latex
 
@@ -78,22 +77,15 @@ def main():
     print(f"  Generado: {out_path.name}")
 
     if compile_choice:
-        env_msg = ensure_latex_dependencies()
+        env_msg = ensure_compile_available()
         if env_msg:
             print("  No se pudo compilar: faltan dependencias.")
             print(env_msg)
         else:
             print("  Estado del entorno:")
             print("    " + status_report().replace("\n", "\n    "))
-            print(f"  Compilando con latexmk...")
-            result = subprocess.run(
-                ["latexmk", "-pdf", str(out_path)],
-                capture_output=True, text=True, timeout=120,
-            )
-            if result.returncode == 0:
-                print(f"  PDF generado: {out_path.stem}.pdf")
-            else:
-                print("  Error en compilación. Revisa el archivo .log")
+            ok, cmsg = compile_pdf(out_path, out_dir)
+            print(f"  {cmsg}")
 
     print()
     print("¡Listo!")
