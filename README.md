@@ -36,8 +36,7 @@ Puedes generar un único documento o varios capítulos que se integran en un doc
   - macOS: MacTeX (`brew install --cask mactex`)
   - Windows: MiKTeX. El instalador de md2tex detecta si no está instalado y ofrece descargarlo e instalarlo automáticamente (~150 MB); si lo rechazas, puedes instalarlo luego desde https://miktex.org/download
 - **latexmk** (incluido con LaTeX; en Windows MiKTeX: `mpm --install=latexmk`).
-- **Perl** (necesario para latexmk en Windows: el instalador de Windows puede instalar Strawberry Perl automáticamente si falta; instale Strawberry Perl desde https://strawberryperl.com).
-- **Perl** no es obligatorio en Linux/macOS (viene incluido). Sin Perl, md2tex compila con `pdflatex` directamente.
+- **Perl** (necesario para latexmk en Windows). El instalador de Windows puede instalar Strawberry Perl automáticamente si falta. **Opcional:** si no instala Perl, md2tex compila con `pdflatex` directamente (2 pasadas), por lo que Perl no es obligatorio.
 
 > **Nota:** si no tienes LaTeX, el programa sigue funcionando: convierte Markdown a `.tex`. Solo la generación del PDF requiere LaTeX. En la GUI puedes desmarcar "Compilar con latexmk".
 

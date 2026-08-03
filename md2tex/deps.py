@@ -128,6 +128,13 @@ def compile_pdf(tex_path, cwd=None) -> tuple:
     *fallback* cuando falta perl). Devuelve ``(ok, mensaje)``. El ``cwd``
     debe ser el directorio donde vive el ``.tex`` (ahí resuelve
     ``\\graphicspath{{figures/}}``).
+
+    Antes de compilar, en Windows/MiKTeX, prepara el entorno local
+    (``initexmf --update-fndb`` y ``[MPM]AutoInstall=1``) para evitar el
+    típico error de primera ejecución
+    ``"major issue: So far, you have not checked for MiKTeX updates"``.
+    Si aparece, reintenta tras refrescar la base de datos de paquetes
+    remota (``mpm --update-db``).
     """
     tex_name = Path(tex_path).name
     cwd = str(Path(cwd) if cwd else Path(tex_path).parent)
@@ -136,28 +143,67 @@ def compile_pdf(tex_path, cwd=None) -> tuple:
     if backend is None:
         return False, ensure_compile_available()
 
+    # Preparación local de MiKTeX (solo existe en Windows/MiKTeX; en otras
+    # plataformas falla silenciosamente).
+    if sys.platform == "win32":
+        _run_silent(["initexmf", "--update-fndb"])
+        _run_silent(["initexmf", "--set-config-value=[MPM]AutoInstall=1"])
+
     if backend == "latexmk":
         cmd = ["latexmk", "-pdf", tex_name]
         passes = 1
     else:
         cmd = ["pdflatex", "-interaction=nonstopmode", "-halt-on-error", tex_name]
-        passes = 2  # 2 pasadas para resolver la toc y referencias cruzadas
+        passes = 2  # 2 pasadas para la toc y referencias cruzadas
 
+    res = None
+    for attempt in (1, 2):
+        try:
+            for _ in range(passes):
+                res = subprocess.run(
+                    cmd, cwd=cwd, stdin=subprocess.DEVNULL,
+                    capture_output=True, text=True, timeout=300,
+                )
+                if res.returncode != 0:
+                    break
+        except subprocess.TimeoutExpired:
+            return False, "⚠ Compilación excedió el tiempo máximo (300 s)."
+        except FileNotFoundError:
+            return False, f"⚠ {backend} no está disponible en el PATH."
+
+        if res.returncode == 0:
+            return True, f"📄 {Path(tex_path).stem}.pdf compilado ({detail})"
+
+        tail = (res.stderr or res.stdout or "").strip()
+        # Primer fallo con el típico aviso de "no se ha comprobado actualizaciones"?
+        # Refrescamos la base de datos remota y reintentamos una sola vez.
+        if attempt == 1 and sys.platform == "win32" and _needs_miktex_update_check(tail):
+            _run_silent(["mpm", "--update-db"])
+            continue
+
+        hint = _MISKTIP_HINT if backend == "pdflatex" else ""
+        return False, f"⚠ Compilación fallida ({detail}).\n{tail[-800:]}{hint}"
+
+    return False, "⚠ Compilación fallida tras refrescar la base de datos de MiKTeX."
+
+
+def _needs_miktex_update_check(text: str) -> bool:
+    t = (text or "").lower()
+    return ("not checked for miktex updates" in t
+            or "no se ha comprobado" in t
+            or "major issue: so far" in t)
+
+
+def _run_silent(cmd: list) -> None:
+    """Ejecuta un comando de preparación de MiKTeX; ignora fallos."""
     try:
-        for _ in range(passes):
-            res = subprocess.run(
-                cmd, cwd=cwd, stdin=subprocess.DEVNULL,
-                capture_output=True, text=True, timeout=300,
-            )
-    except subprocess.TimeoutExpired:
-        return False, "⚠ Compilación excedió el tiempo máximo (300 s)."
-    except FileNotFoundError:
-        return False, f"⚠ {backend} no está disponible en el PATH."
+        subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        pass
 
-    if res.returncode != 0:
-        tail = (res.stderr or res.stdout or "").strip()[-800:]
-        if tail:
-            tail = "\n" + tail
-        return False, f"⚠ Compilación fallida ({detail}).{tail}"
 
-    return True, f"📄 {Path(tex_path).stem}.pdf compilado ({detail})"
+_MISKTIP_HINT = (
+    "\n\nSi MiKTeX no tiene actualizada la base de datos de paquetes, "
+    "ejecute 'mpm --update-db' o abra MiKTeX Console → tareas → "
+    "actualizar base de datos de paquetes."
+)

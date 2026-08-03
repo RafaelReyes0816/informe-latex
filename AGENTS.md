@@ -89,6 +89,19 @@ The workflow at `.github/workflows/release.yml` builds and creates a GitHub Rele
 
 Bump version in `md2tex/__init__.py` and `pyproject.toml` before tagging.
 
+## PDF compilation (runtime)
+
+md2tex elige el motor de compilación con `md2tex/deps.py::preferred_backend()`:
+
+1. **latexmk + perl** (preferido) → `latexmk -pdf` (resuelve TOC, referencias y bib automáticamente).
+2. **pdflatex** (fallback) → `pdflatex -interaction=nonstopmode` 2 pasadas. **No necesita Perl**, por lo que
+   sirve cuando solo está MiKTeX/TeX Live sin Perl/Strawberry.
+3. Ninguno → mensaje amigable con instrucciones de instalación por SO.
+
+`compile_pdf()` también "prepara" MiKTeX en Windows corriendo `initexmf --update-fndb`
+y `[MPM]AutoInstall=1` antes de compilar, y reintenta con `mpm --update-db` si aparece
+el típico aviso de primera ejecución *"So far, you have not checked for MiKTeX updates"*.
+
 ## Common pitfalls
 
 - Do **not** commit build artifacts (`*.aux`, `*.log`, `*.out`, `*.toc`, `*.fdb_latexmk`, `*.fls`, `*.bbl`, `*.bcf`, `*.blg`, `*.run.xml`, `_minted-*`). Add to `.gitignore`.
