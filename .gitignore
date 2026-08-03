@@ -31,3 +31,4 @@ figures/
 /*.md
 !README.md
 !AGENTS.md
+examples/*.md
