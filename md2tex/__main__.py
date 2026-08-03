@@ -3,10 +3,10 @@ import sys
 
 def main():
     if "--cli" in sys.argv:
-        from .cli import main as cli_main
+        from md2tex.cli import main as cli_main
         cli_main()
     else:
-        from .gui import main as gui_main
+        from md2tex.gui import main as gui_main
         gui_main()
 
 

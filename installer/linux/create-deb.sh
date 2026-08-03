@@ -24,7 +24,7 @@ Section: text
 Priority: optional
 Architecture: amd64
 Maintainer: Rafael Reyes <rafaelreyes0816@gmail.com>
-Depends: libc6 (>= 2.31), texlive-latex-base, texlive-latex-extra, texlive-binaries, latexmk
+Depends: libc6 (>= 2.31), texlive-latex-base, texlive-latex-extra, texlive-fonts-recommended, texlive-lang-spanish, latexmk
 Description: md2tex — Markdown to LaTeX converter
  Converts Markdown files into compilable LaTeX documents
  with automatic image handling, templates, and more.

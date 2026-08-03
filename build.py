@@ -67,6 +67,8 @@ def build_binary(gui: bool = True):
         "--specpath", str(HERE),
     ]
     if gui:
+        cmd.append("--collect-data")
+        cmd.append("customtkinter")
         if os_name == "windows":
             cmd.append("--noconsole")
         elif os_name == "macos":
@@ -99,6 +101,7 @@ def build_installer():
                 "pyinstaller", "--onedir", "--windowed",
                 "--name", name,
                 "--add-data", f"templates:templates",
+                "--collect-data", "customtkinter",
                 "--distpath", str(dist_dir),
                 "--workpath", str(BUILD_DIR),
                 "--specpath", str(HERE),

@@ -51,3 +51,33 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
+
+[Code]
+function LatexmkAvailable(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := False;
+  if Exec('cmd.exe', '/c latexmk --version >nul 2>&1', '', SW_HIDE,
+      ewWaitUntilTerminated, ResultCode) then
+  begin
+    Result := (ResultCode = 0);
+  end;
+end;
+
+function InitializeSetup(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  if not LatexmkAvailable() then
+  begin
+    if MsgBox('md2tex needs latexmk (from a LaTeX distribution like MiKTeX) ' +
+              'to compile PDFs, but it was not found on this system.' + #13#10 + #13#10 +
+              'Do you want to download MiKTeX now?', mbConfirmation, MB_YESNO) = IDYES then
+    begin
+      ShellExec('open', 'https://miktex.org/download', '', '', SW_SHOW,
+                ewNoWait, ResultCode);
+    end;
+  end;
+  Result := True;
+end;
