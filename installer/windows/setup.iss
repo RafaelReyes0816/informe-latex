@@ -58,10 +58,6 @@ const
   // Check https://miktex.org/download for the latest "Installer" link.
   MiKTeXUrl = 'https://miktex.org/download/ctan/systems/win32/miktex/setup/windows-x64/basic-miktex-25.12-x64.exe';
 
-function URLDownloadToFile(pCaller: Longint; szURL: string; szFileName: string;
-    dwReserved: Longint; lpfnCB: Longint): Integer;
-  external 'URLDownloadToFile@urlmon.dll stdcall';
-
 function LatexmkAvailable(): Boolean;
 var
   ResultCode: Integer;
@@ -74,9 +70,28 @@ begin
   end;
 end;
 
+function DownloadFile(const Url, Dest: string): Boolean;
+var
+  ResultCode: Integer;
+  PS: string;
+begin
+  Result := False;
+  // PowerShell is present on all supported Windows versions and avoids a
+  // dependency on urlmon.dll (which may be missing on stripped Windows
+  // builds like Tiny11 / Ghost Spectre).
+  PS := '-NoProfile -ExecutionPolicy Bypass -Command "' +
+        '$ProgressPreference=''SilentlyContinue''; ' +
+        'try { Invoke-WebRequest -UseBasicParsing -Uri ''' + Url +
+        ''' -OutFile ''' + Dest +
+        ''' -TimeoutSec 300; exit 0 } catch { exit 1 }"';
+  if Exec('powershell.exe', PS, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+  begin
+    Result := (ResultCode = 0) and FileExists(Dest);
+  end;
+end;
+
 function InstallMiKTeX(): Boolean;
 var
-  DownloadResult: Integer;
   InstallResultCode: Integer;
   InstallerPath: string;
 begin
@@ -87,10 +102,9 @@ begin
   begin
     MsgBox('Downloading MiKTeX Basic (~150 MB). This can take a few minutes...',
            mbInformation, MB_OK);
-    DownloadResult := URLDownloadToFile(0, MiKTeXUrl, InstallerPath, 0, 0);
-    if DownloadResult <> 0 then
+    if not DownloadFile(MiKTeXUrl, InstallerPath) then
     begin
-      MsgBox('Failed to download MiKTeX (error ' + IntToStr(DownloadResult) + ').' + #13#10 +
+      MsgBox('Failed to download MiKTeX.' + #13#10 +
              'You can install it later from https://miktex.org/download',
              mbError, MB_OK);
       Exit;
