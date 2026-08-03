@@ -8,6 +8,7 @@ from tkinter import filedialog, messagebox
 import customtkinter as ctk
 
 from .converter import parse, _render_block
+from .deps import ensure_latex_dependencies, status_report
 from .image_handler import handle_images
 from .template import list_templates, load_template, apply_template
 from .project import ProjectConfig
@@ -306,6 +307,15 @@ class ConfigPanel(ctk.CTkFrame):
             self._on_finish(False, f"❌ Error: {e}")
 
     def _compile(self, tex_path: Path) -> None:
+        env_msg = ensure_latex_dependencies()
+        if env_msg:
+            self._log("⚠ No se puede compilar: faltan dependencias.")
+            self._log(env_msg)
+            return
+
+        self._log("Estado del entorno:")
+        self._log(status_report())
+
         try:
             r = subprocess.run(
                 ["latexmk", "-pdf", str(tex_path)],
@@ -316,14 +326,10 @@ class ConfigPanel(ctk.CTkFrame):
             else:
                 self._log("⚠ latexmk falló. Revisa el .log")
                 if r.stderr:
-                    self._log(r.stderr[-500:])
+                    self._log(r.stderr[-800:])
         except FileNotFoundError:
             self._log("⚠ latexmk no está instalado. Compila manualmente.")
-            msg = ("Instala latexmk:\n"
-                   "  Linux: sudo apt install texlive-latex-extra latexmk\n"
-                   "  macOS: brew install texlive  (o MacTeX)\n"
-                   "  Windows: MiKTeX → mpm --install=latexmk")
-            self._log(msg)
+            self._log("Instala LaTeX + latexmk (Linux: texlive / macOS: MacTeX / Windows: MiKTeX).")
         except subprocess.TimeoutExpired:
             self._log("⚠ latexmk excedió el tiempo máximo.")
 

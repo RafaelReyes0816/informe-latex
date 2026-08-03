@@ -6,23 +6,9 @@ from pathlib import Path
 import questionary
 
 from .converter import parse, _render_block
+from .deps import ensure_latex_dependencies, status_report
 from .image_handler import handle_images
 from .template import build_latex
-
-
-def find_md_files():
-    return sorted(Path(".").glob("*.md"))
-
-
-def has_latexmk():
-    try:
-        result = subprocess.run(
-            ["latexmk", "--version"],
-            capture_output=True, text=True, timeout=5,
-        )
-        return result.returncode == 0
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        return False
 
 
 def main():
@@ -91,24 +77,23 @@ def main():
     out_path.write_text(latex, encoding="utf-8")
     print(f"  Generado: {out_path.name}")
 
-    has_latexmk_bin = has_latexmk()
-    if compile_choice and has_latexmk_bin:
-        print(f"  Compilando con latexmk...")
-        result = subprocess.run(
-            ["latexmk", "-pdf", str(out_path)],
-            capture_output=True, text=True, timeout=120,
-        )
-        if result.returncode == 0:
-            print(f"  PDF generado: {out_path.stem}.pdf")
+    if compile_choice:
+        env_msg = ensure_latex_dependencies()
+        if env_msg:
+            print("  No se pudo compilar: faltan dependencias.")
+            print(env_msg)
         else:
-            print("  Error en compilación. Revisa el archivo .log")
-    elif compile_choice and not has_latexmk_bin:
-        print("  latexmk no está disponible. Compila manualmente con:")
-        print(f"  $ latexmk -pdf {out_path.name}")
-        print("  Para instalar latexmk:")
-        print("    Linux:   sudo apt install texlive-latex-extra latexmk")
-        print("    macOS:   brew install texlive (o instalar MacTeX)")
-        print("    Windows: instalar MiKTeX y luego: mpm --install=latexmk")
+            print("  Estado del entorno:")
+            print("    " + status_report().replace("\n", "\n    "))
+            print(f"  Compilando con latexmk...")
+            result = subprocess.run(
+                ["latexmk", "-pdf", str(out_path)],
+                capture_output=True, text=True, timeout=120,
+            )
+            if result.returncode == 0:
+                print(f"  PDF generado: {out_path.stem}.pdf")
+            else:
+                print("  Error en compilación. Revisa el archivo .log")
 
     print()
     print("¡Listo!")

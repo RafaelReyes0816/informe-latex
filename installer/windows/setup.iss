@@ -126,6 +126,18 @@ begin
   end;
 end;
 
+function PerlAvailable(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := False;
+  if Exec('cmd.exe', '/c perl --version >nul 2>&1', '', SW_HIDE,
+      ewWaitUntilTerminated, ResultCode) then
+  begin
+    Result := (ResultCode = 0);
+  end;
+end;
+
 function InitializeSetup(): Boolean;
 begin
   if not LatexmkAvailable() then
@@ -136,6 +148,20 @@ begin
               mbConfirmation, MB_YESNO) = IDYES then
     begin
       InstallMiKTeX();
+    end;
+  end;
+  // latexmk needs a Perl interpreter. If a LaTeX distribution is now
+  // present but Perl is missing, alert the user (avoids the cryptic
+  // "MiKTeX could not find the script engine 'perl'" at compile time).
+  if LatexmkAvailable() and not PerlAvailable() then
+  begin
+    MsgBox('LaTeX was detected, but md2tex also needs Perl to run latexmk.' + #13#10 +
+           'Without it, PDF compilation will fail.' + #13#10 + #13#10 +
+           'Install Strawberry Perl: https://strawberryperl.com' + #13#10 + #13#10 +
+           'Click OK to open the download page, or install it later.',
+           mbConfirmation, MB_OKCANCEL) = IDOK then
+    begin
+      ShellExec('open', 'https://strawberryperl.com', '', '', SW_SHOW, ewNoWait, ResultCode);
     end;
   end;
   Result := True;
