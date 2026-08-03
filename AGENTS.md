@@ -91,7 +91,7 @@ Bump version in `md2tex/__init__.py` and `pyproject.toml` before tagging.
 
 ## PDF compilation (runtime)
 
-md2tex elige el motor de compilación con `md2tex/deps.py::preferred_backend()`:
+md2tex elige el motor de compilación con `md2tex/environment/compiler.py::LatexCompiler`:
 
 1. **latexmk + perl** (preferido) → `latexmk -pdf` (resuelve TOC, referencias y bib automáticamente).
 2. **pdflatex** (fallback) → `pdflatex -interaction=nonstopmode` 2 pasadas. **No necesita Perl**, por lo que
@@ -101,6 +101,26 @@ md2tex elige el motor de compilación con `md2tex/deps.py::preferred_backend()`:
 `compile_pdf()` también "prepara" MiKTeX en Windows corriendo `initexmf --update-fndb`
 y `[MPM]AutoInstall=1` antes de compilar, y reintenta con `mpm --update-db` si aparece
 el típico aviso de primera ejecución *"So far, you have not checked for MiKTeX updates"*.
+
+## Environment Management (v1.0.0)
+
+md2tex incluye un sistema de gestión de dependencias multi-plataforma en `md2tex/environment/`:
+
+- `base.py` — clase base `EnvironmentBase` con detección del sistema, herramientas y permisos.
+- `checker.py` — `EnvironmentChecker`: detección de compiladores, versiones, paquetes LaTeX (vía `kpsewhich`).
+- `compiler.py` — `LatexCompiler`: motor inteligente de compilación con fallback `latexmk → xelatex → lualatex → pdflatex`.
+- `validator.py` — `EnvironmentValidator`: validación completa del entorno antes de compilar.
+- `report.py` — `EnvironmentReporter`: genera informes de diagnóstico detallados.
+- `repair.py` — `EnvironmentRepairer`: corrige PATH, MiKTeX, paquetes y limpia temporales.
+- `installer.py` — `DependencyInstaller`: instala dependencias (MiKTeX en Windows, apt/brew en Linux/macOS).
+- `windows.py`, `linux.py`, `macos.py` — gestión específica por SO.
+
+### Diagnóstico y reparación
+
+Desde la GUI: **Herramientas → Diagnóstico del entorno / Reparar entorno**.
+Desde CLI: selecciona la opción al iniciar.
+
+`md2tex/deps.py` mantiene compatibilidad como capa delgada que delega al paquete `environment/`.
 
 ## Common pitfalls
 

@@ -421,12 +421,95 @@ class App(ctk.CTk):
         )
         self.status.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 8))
 
+        self._env_status = ctk.CTkLabel(
+            self, text="", anchor="w", height=24
+        )
+        self._env_status.grid(row=2, column=0, sticky="ew", padx=12, pady=(0, 8))
+
+        self._setup_menubar()
+        self._update_env_status()
+
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
         cfg = ProjectConfig.load()
         self.config_panel.restore_config(cfg)
         if cfg.files:
             self.config_panel._preview_first_file()
+
+    def _setup_menubar(self) -> None:
+        menubar = ctk.CTkMenuBar(self)
+        self.configure(menu=menubar)
+
+        tools_menu = ctk.CTkMenu(menubar, tearoff=0)
+        menu_btn = ctk.CTkButton(
+            menubar, text="Herramientas",
+            command=lambda: tools_menu.tk_popup(
+                self.winfo_pointerx(), self.winfo_pointery() + 30
+            )
+        )
+        menu_btn.pack(side="left", padx=0, pady=0)
+
+        tools_menu.add_command(label="Diagnóstico del entorno", command=self._run_diagnosis)
+        tools_menu.add_command(label="Reparar entorno", command=self._run_repair)
+        tools_menu.add_separator()
+        tools_menu.add_command(label="Salir", command=self._on_close)
+
+    def _update_env_status(self) -> None:
+        from .environment.checker import EnvironmentChecker
+        from .environment.validator import EnvironmentValidator
+
+        validation = EnvironmentValidator.validate()
+        if validation["all_ok"]:
+            self._env_status.configure(
+                text="🟢 Entorno listo — " + (validation["backend"] or "Ningún motor")
+            )
+        else:
+            missing = validation.get("missing_tools", [])
+            if missing:
+                self._env_status.configure(
+                    text=f"🟡 Herramientas faltantes: {', '.join(missing)}"
+                )
+            else:
+                self._env_status.configure(
+                    text="🟡 Entorno con problemas — revise diagnóstico"
+                )
+
+    def _run_diagnosis(self) -> None:
+        from .environment.report import EnvironmentReporter
+        from tkinter import filedialog
+
+        report = EnvironmentReporter.generate_report()
+        self.preview_panel.append_log(report)
+
+        save = messagebox.askyesno(
+            "Diagnóstico",
+            f"{report}\n\n¿Guardar reporte a archivo?",
+        )
+        if save:
+            path = filedialog.asksaveasfilename(
+                defaultextension=".txt",
+                initialfile="md2tex-diagnostico.txt",
+            )
+            if path:
+                EnvironmentReporter.generate_report(Path(path))
+
+    def _run_repair(self) -> None:
+        from .environment.repair import EnvironmentRepairer
+        from .environment.installer import DependencyInstaller
+
+        repairer = EnvironmentRepairer()
+        success, message, actions = repairer.repair()
+
+        installer = DependencyInstaller()
+        ok, msg, install_actions = installer.install_all_needed()
+        actions.extend(install_actions)
+
+        from .environment.report import EnvironmentReporter
+        report = EnvironmentReporter.generate_report()
+        full_report = message + "\n\n" + "\n".join(actions) + "\n\n" + report
+        self.preview_panel.append_log(full_report)
+        self._update_env_status()
+        messagebox.showinfo("Reparación", full_report[:500] + ("..." if len(full_report) > 500 else ""))
 
     def _on_close(self) -> None:
         cfg = self.config_panel._collect_config()

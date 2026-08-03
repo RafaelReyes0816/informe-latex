@@ -10,12 +10,54 @@ from .image_handler import handle_images
 from .template import build_latex
 
 
+def find_md_files() -> list[Path]:
+    return sorted(Path(".").resolve().glob("*.md"))
+
+
 def main():
     print("╔══════════════════════════════════════╗")
     print("║  md2tex — Markdown a LaTeX           ║")
     print("╚══════════════════════════════════════╝")
     print()
 
+    from .environment.checker import EnvironmentChecker
+    from .environment.validator import EnvironmentValidator
+
+    print("Estado del entorno:")
+    print("  " + status_report().replace("\n", "\n  "))
+    validation = EnvironmentValidator.validate()
+    if validation["all_ok"]:
+        print(f"  🟢 Entorno listo — Motor: {validation['backend'] or 'Ninguno'}")
+    else:
+        missing = validation.get("missing_tools", [])
+        mpkgs = validation.get("missing_packages", [])
+        if missing:
+            print(f"  🟡 Herramientas faltantes: {', '.join(missing)}")
+        if mpkgs:
+            print(f"  🟡 Paquetes faltantes: {', '.join(mpkgs)}")
+    print()
+
+    choice = questionary.select(
+        "¿Qué desea hacer?",
+        choices=[
+            "Convertir Markdown a LaTeX",
+            "Diagnóstico del entorno",
+            "Reparar entorno",
+            "Salir",
+        ],
+    ).ask()
+
+    if choice == "Diagnóstico del entorno":
+        _run_diagnosis()
+        sys.exit(0)
+    elif choice == "Reparar entorno":
+        _run_repair()
+        sys.exit(0)
+    elif choice == "Salir":
+        print("¡Hasta luego!")
+        sys.exit(0)
+
+    print()
     md_files = find_md_files()
 
     choices = [str(f) for f in md_files]
@@ -89,3 +131,36 @@ def main():
 
     print()
     print("¡Listo!")
+
+
+def _run_diagnosis():
+    from .environment.report import EnvironmentReporter
+    report = EnvironmentReporter.generate_report()
+    print(report)
+    save = questionary.confirm("¿Guardar reporte a archivo?", default=False).ask()
+    if save:
+        path = questionary.path(
+            "Ruta del archivo:", default="md2tex-diagnostico.txt"
+        ).ask()
+        if path:
+            from pathlib import Path
+            EnvironmentReporter.generate_report(Path(path))
+            print(f"  Reporte guardado: {Path(path).name}")
+
+
+def _run_repair():
+    from .environment.repair import EnvironmentRepairer
+    from .environment.installer import DependencyInstaller
+
+    print("Reparando entorno...")
+    repairer = EnvironmentRepairer()
+    success, message, actions = repairer.repair()
+    print(f"  {message}")
+    for a in actions:
+        print(f"  · {a}")
+
+    installer = DependencyInstaller()
+    ok, msg, install_actions = installer.install_all_needed()
+    print(f"  {msg}")
+    for a in install_actions:
+        print(f"  · {a}")
