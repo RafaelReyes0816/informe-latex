@@ -26,6 +26,7 @@ Puedes generar un único documento o varios capítulos que se integran en un doc
 - Templates personalizables (`templates/`) con placeholders `{TITLE}`, `{AUTHOR}`, `{DATE}`, `{CONTENT}`.
 - Guardado de configuración de proyecto (`.md2tex_project.json`).
 - Instaladores para Linux (`.deb`), macOS (`.dmg`) y Windows (`.exe`).
+- El instalador de Windows detecta si falta LaTeX y puede descargar e instalar MiKTeX automáticamente.
 
 ## Prerrequisitos del sistema
 
@@ -33,7 +34,7 @@ Puedes generar un único documento o varios capítulos que se integran en un doc
 - **LaTeX** para compilar el PDF:
   - Linux: `sudo apt install texlive-latex-base texlive-latex-extra`
   - macOS: MacTeX (`brew install --cask mactex`)
-  - Windows: MiKTeX (el instalador de md2tex puede descargarlo e instalarlo automáticamente)
+  - Windows: MiKTeX. El instalador de md2tex detecta si no está instalado y ofrece descargarlo e instalarlo automáticamente (~150 MB); si lo rechazas, puedes instalarlo luego desde https://miktex.org/download
 - **latexmk** (incluido con LaTeX; en Windows MiKTeX: `mpm --install=latexmk`).
 - **Perl** (necesario para latexmk en Windows).
 
@@ -102,8 +103,8 @@ Los tags `v*` disparan GitHub Actions que construyen los instaladores de los tre
 | Windows | `.exe` (Inno Setup) |
 
 ```bash
-git tag -a v0.2.2 -m "v0.2.2"
-git push origin v0.2.2
+git tag -a v0.2.3 -m "v0.2.3"
+git push origin v0.2.3
 ```
 
 Bump de versión en `md2tex/__init__.py` y `pyproject.toml` antes de etiquetar.
