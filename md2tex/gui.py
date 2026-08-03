@@ -426,7 +426,12 @@ class App(ctk.CTk):
         )
         self._env_status.grid(row=2, column=0, sticky="ew", padx=12, pady=(0, 8))
 
-        self._setup_menubar()
+        try:
+            from .ui.menu import setup_menu
+            self._menu_ok = setup_menu(self)
+        except Exception as exc:
+            self._menu_ok = False
+            self._log_menu_error(exc)
         self._update_env_status()
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -436,17 +441,13 @@ class App(ctk.CTk):
         if cfg.files:
             self.config_panel._preview_first_file()
 
-    def _setup_menubar(self) -> None:
-        from tkinter import Menu as TkMenu
-        menubar = TkMenu(self)
-        self.configure(menu=menubar)
+    def _log_menu_error(self, exc: Exception) -> None:
+        from .ui.menu import _log_error
+        _log_error("menu_inicializacion", exc)
 
-        tools_menu = TkMenu(menubar, tearoff=0)
-        menubar.add_cascade(label="Herramientas", menu=tools_menu)
-        tools_menu.add_command(label="Diagnóstico del entorno", command=self._run_diagnosis)
-        tools_menu.add_command(label="Reparar entorno", command=self._run_repair)
-        tools_menu.add_separator()
-        tools_menu.add_command(label="Salir", command=self._on_close)
+    def _setup_menubar(self) -> None:
+        from .ui.menu import setup_menu
+        self._menu_ok = setup_menu(self)
 
     def _update_env_status(self) -> None:
         from .environment.checker import EnvironmentChecker
