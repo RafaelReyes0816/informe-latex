@@ -46,16 +46,20 @@ class DependencyInstaller(EnvironmentBase):
             return commands
 
         install_deps = []
-        if "pdflatex" in missing_deps or "latexmk" in missing_deps:
-            install_deps.extend(["texlive-latex-base", "texlive-latex-extra",
-                                 "texlive-fonts-recommended", "latexmk"])
-        if "perl" in missing_deps:
-            install_deps.append("perl")
+        missing_engines = any(
+            e in missing_deps for e in ("xelatex", "lualatex", "pdflatex", "latexmk")
+        )
+        if missing_engines:
+            install_deps.extend([
+                "texlive-latex-base", "texlive-latex-extra",
+                "texlive-fonts-recommended", "texlive-xetex", "latexmk",
+            ])
         if "xelatex" in missing_deps:
-            install_deps.extend(["texlive-xetex"])
+            install_deps.append("texlive-xetex")
         if "lualatex" in missing_deps:
             install_deps.extend(["texlive-luatex"])
 
+        install_deps = list(dict.fromkeys(install_deps))
         if install_deps:
             commands.append(["sudo", "apt", "update"])
             commands.append(["sudo", "apt", "install", "-y"] + install_deps)
@@ -72,10 +76,11 @@ class DependencyInstaller(EnvironmentBase):
         install_deps = []
         if "latexmk" in missing_deps:
             install_deps.append("latexmk")
-        if "pdflatex" in missing_deps:
+        missing_engines = any(
+            e in missing_deps for e in ("xelatex", "lualatex", "pdflatex")
+        )
+        if missing_engines:
             commands.append(["brew", "install", "--cask", "mactex"])
-        if "perl" in missing_deps:
-            install_deps.append("perl")
 
         if install_deps:
             commands.append(["brew", "install"] + install_deps)
@@ -84,10 +89,11 @@ class DependencyInstaller(EnvironmentBase):
 
     def _windows_install_commands(self, missing_deps: list[str]) -> list[list[str]]:
         commands = []
-        if "pdflatex" in missing_deps or "latexmk" in missing_deps or "kpsewhich" in missing_deps:
+        missing_engines = any(
+            e in missing_deps for e in ("xelatex", "lualatex", "pdflatex", "latexmk", "kpsewhich")
+        )
+        if missing_engines:
             commands.append(self._download_miktex())
-        if "perl" in missing_deps:
-            commands.append(self._download_strawberry_perl())
         return commands
 
     def install_dependencies(self, deps: list[str]) -> bool:
@@ -120,14 +126,6 @@ class DependencyInstaller(EnvironmentBase):
                 "--package-set=complete download; "
                 ".\\miktexsetup.exe --local-package-repository=. install --service>"]
 
-    @staticmethod
-    def _download_strawberry_perl() -> list[str]:
-        url = ("https://github.com/StrawberryPerl/Perl/releases/download/"
-               "5.38.7.1/StrawberryPerl-5.38.7.1-64bit.msi")
-        return ["powershell", "-Command",
-                f"Invoke-WebRequest -Uri '{url}' -OutFile 'strawberry.msi'; "
-                "msiexec /i strawberry.msi /quiet /norestart"]
-
     def get_install_hints(self) -> dict[str, str]:
         hints = {}
         for tool in EnvironmentChecker.TOOLS:
@@ -150,9 +148,9 @@ class DependencyInstaller(EnvironmentBase):
                 "windows": "El instalador de md2tex instala MiKTeX automáticamente",
             },
             "perl": {
-                "linux": "sudo apt install perl",
-                "darwin": "Perl está incluido con macOS",
-                "windows": "El instalador instala Strawberry Perl, o descargue desde https://strawberryperl.com",
+                "linux": "Solo necesario para el modo avanzado latexmk: sudo apt install perl",
+                "darwin": "Solo necesario para el modo avanzado latexmk; ya incluido con macOS",
+                "windows": "Solo necesario para el modo avanzado latexmk; descargue desde https://strawberryperl.com",
             },
         }
         if sys.platform == "win32":
@@ -168,13 +166,24 @@ class DependencyInstaller(EnvironmentBase):
         if not missing_tools:
             return True, "Todas las dependencias están instaladas", []
 
+        # perl/latexmk son opcionales (modo avanzado); no disparan instalación.
+        required_missing = [
+            t for t in missing_tools
+            if t not in EnvironmentChecker.OPTIONAL_TOOLS
+        ]
+        if not required_missing:
+            return True, (
+                "Herramientas opcionales (latexmk/perl) no instaladas; "
+                "no son necesarias para compilar"
+            ), []
+
         actions = []
         if self._platform_key == "windows":
-            success = self._windows_auto_install(missing_tools, actions)
+            success = self._windows_auto_install(required_missing, actions)
         elif self._platform_key == "linux":
-            success = self._linux_auto_install(missing_tools, actions)
+            success = self._linux_auto_install(required_missing, actions)
         elif self._platform_key == "macos":
-            success = self._macos_auto_install(missing_tools, actions)
+            success = self._macos_auto_install(required_missing, actions)
         else:
             return False, "Sistema operativo no soportado", []
 
@@ -182,13 +191,19 @@ class DependencyInstaller(EnvironmentBase):
         return success, message, actions
 
     def _windows_auto_install(self, missing_tools: list[str], actions: list[str]) -> bool:
-        if "pdflatex" in missing_tools or "latexmk" in missing_tools or "kpsewhich" in missing_tools:
+        missing_engines = any(
+            e in missing_tools for e in ("xelatex", "lualatex", "pdflatex", "latexmk", "kpsewhich")
+        )
+        if missing_engines:
             actions.append("Descargando e instalando MiKTeX...")
             return self._install_miktex(actions)
         return False
 
     def _macos_auto_install(self, missing_tools: list[str], actions: list[str]) -> bool:
-        if "pdflatex" in missing_tools or "latexmk" in missing_tools:
+        missing_engines = any(
+            e in missing_tools for e in ("xelatex", "lualatex", "pdflatex", "latexmk")
+        )
+        if missing_engines:
             actions.append("Instalando MacTeX (descarga grande)...")
             if shutil.which("brew"):
                 try:

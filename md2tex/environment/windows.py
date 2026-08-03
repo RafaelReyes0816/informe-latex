@@ -13,7 +13,7 @@ from .checker import EnvironmentChecker
 
 class WindowsEnvironment(EnvironmentBase):
     PLATFORM_KEY = "windows"
-    TOOLS = ("latexmk", "perl", "pdflatex", "xelatex", "lualatex", "kpsewhich")
+    TOOLS = ("xelatex", "lualatex", "pdflatex", "kpsewhich", "latexmk", "perl")
     PACKAGES = [
         "amsmath", "amssymb", "graphicx", "hyperref", "booktabs",
         "array", "xcolor", "listings", "geometry", "setspace", "babel",

@@ -5,10 +5,8 @@ LaTeX project for reports and research documents.
 ## Prerrequisitos del sistema
 
 - **Python ≥ 3.10** con tkinter (en Linux: `sudo apt install python3-tk`)
-- **LaTeX** (texlive): `sudo apt install texlive-latex-base texlive-latex-extra` (Linux), MacTeX (macOS), MiKTeX (Windows)
-- **latexmk**: incluido en texlive-latex-extra (Linux), MacTeX (macOS), o `mpm --install=latexmk` (Windows MiKTeX)
-- **Perl** (necesario para latexmk en Windows: instale Strawberry Perl desde https://strawberryperl.com; opcional, md2tex puede compilar con pdflatex si falta Perl)
-- **Perl** (necesario para latexmk en Windows)
+- **LaTeX** (basta un motor): `sudo apt install texlive-latex-base texlive-xetex` (Linux), MacTeX (macOS), MiKTeX (Windows)
+- **latexmk** y **Perl** solo para el modo avanzado `latexmk`; **opcionales**, md2tex compila con `xelatex`/`lualatex`/`pdflatex` sin Perl. El instalador de Windows ya no instala Strawberry Perl.
 
 ## Build
 
@@ -91,24 +89,21 @@ Bump version in `md2tex/__init__.py` and `pyproject.toml` before tagging.
 
 ## PDF compilation (runtime)
 
-md2tex elige el motor de compilación con `md2tex/environment/compiler.py::LatexCompiler`:
+md2tex elige el motor de compilación con `md2tex/environment/checker.py::EnvironmentChecker.resolve_backend(engine)`:
 
-1. **latexmk + perl** (preferido) → `latexmk -pdf` (resuelve TOC, referencias y bib automáticamente).
-2. **pdflatex** (fallback) → `pdflatex -interaction=nonstopmode` 2 pasadas. **No necesita Perl**, por lo que
-   sirve cuando solo está MiKTeX/TeX Live sin Perl/Strawberry.
+1. **Modo automático** (`auto`, por defecto): primer motor disponible de `COMPILER_ORDER = ("xelatex", "lualatex", "pdflatex")`. Si no hay ninguno, último recurso `latexmk + perl`.
+2. **Modo avanzado** (`latexmk`): requiere `latexmk` y `perl`; no son obligatorios para compilar.
 3. Ninguno → mensaje amigable con instrucciones de instalación por SO.
 
-`compile_pdf()` también "prepara" MiKTeX en Windows corriendo `initexmf --update-fndb`
-y `[MPM]AutoInstall=1` antes de compilar, y reintenta con `mpm --update-db` si aparece
-el típico aviso de primera ejecución *"So far, you have not checked for MiKTeX updates"*.
+`compile_pdf(tex_path, cwd, log_dir, engine="auto")` ejecuta **2 pasadas** con cualquier motor (1 para `latexmk`, que se resuelve solo). En Windows "prepara" MiKTeX corriendo `initexmf --update-fndb` y `[MPM]AutoInstall=1` antes de compilar, y reintenta con `mpm --update-db` si aparece el típico aviso de primera ejecución *"So far, you have not checked for MiKTeX updates"*.
 
-## Environment Management (v1.0.0)
+## Environment Management (v1.1.0)
 
 md2tex incluye un sistema de gestión de dependencias multi-plataforma en `md2tex/environment/`:
 
 - `base.py` — clase base `EnvironmentBase` con detección del sistema, herramientas y permisos.
 - `checker.py` — `EnvironmentChecker`: detección de compiladores, versiones, paquetes LaTeX (vía `kpsewhich`).
-- `compiler.py` — `LatexCompiler`: motor inteligente de compilación con fallback `latexmk → xelatex → lualatex → pdflatex`.
+- `compiler.py` — `LatexCompiler`: compila con el motor seleccionado (`auto` → `xelatex → lualatex → pdflatex`; `latexmk` avanzado), 2 pasadas.
 - `validator.py` — `EnvironmentValidator`: validación completa del entorno antes de compilar.
 - `report.py` — `EnvironmentReporter`: genera informes de diagnóstico detallados.
 - `repair.py` — `EnvironmentRepairer`: corrige PATH, MiKTeX, paquetes y limpia temporales.

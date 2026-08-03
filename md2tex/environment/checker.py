@@ -13,7 +13,15 @@ _PLATFORM_KEY = "win32" if sys.platform == "win32" else (
     "darwin" if sys.platform == "darwin" else "linux"
 )
 
-_TOOLS = ("latexmk", "perl", "pdflatex", "xelatex", "lualatex", "kpsewhich")
+# Motores de compilación en orden de preferencia (modo automático).
+COMPILER_ORDER = ("xelatex", "lualatex", "pdflatex")
+# Herramientas del modo avanzado (requieren Perl); nunca obligatorias.
+ADVANCED_TOOLS = ("latexmk", "perl")
+
+_TOOLS = ("xelatex", "lualatex", "pdflatex", "kpsewhich", "latexmk", "perl")
+
+_REQUIRED_TOOLS = ("xelatex", "lualatex", "pdflatex", "kpsewhich")
+_OPTIONAL_TOOLS = ("latexmk", "perl")
 
 _PACKAGES = [
     "amsmath", "amssymb", "graphicx", "hyperref", "booktabs",
@@ -31,14 +39,14 @@ _HUMAN_TOOL_NAMES = {
 
 _HINTS = {
     "latexmk": {
-        "linux": "Linux: sudo apt install texlive-latex-extra latexmk",
-        "darwin": "macOS: MacTeX (https://www.tug.org/mactex/) incluye latexmk",
-        "win32": "Windows: MiKTeX Console → paquetes → instale 'latexmk', o `mpm --install=latexmk`",
+        "linux": "Linux (avanzado): sudo apt install latexmk",
+        "darwin": "macOS (avanzado): MacTeX incluye latexmk",
+        "win32": "Windows (avanzado): MiKTeX Console → paquetes → 'latexmk', o `mpm --install=latexmk`",
     },
     "perl": {
-        "linux": "Linux: sudo apt install perl",
+        "linux": "Linux (avanzado): sudo apt install perl",
         "darwin": "macOS: Perl está incluido con macOS",
-        "win32": "Windows: instale Strawberry Perl (https://strawberryperl.com); o el instalador de md2tex lo instala automáticamente",
+        "win32": "Windows (avanzado): instale Strawberry Perl (https://strawberryperl.com)",
     },
     "pdflatex": {
         "linux": "Linux: sudo apt install texlive-latex-base",
@@ -73,6 +81,8 @@ def _which(name: str) -> bool:
 
 class EnvironmentChecker:
     TOOLS = _TOOLS
+    REQUIRED_TOOLS = _REQUIRED_TOOLS
+    OPTIONAL_TOOLS = _OPTIONAL_TOOLS
 
     @staticmethod
     def platform_key() -> str:
@@ -87,22 +97,64 @@ class EnvironmentChecker:
         return shutil.which(name)
 
     @classmethod
+    def get_version(cls, name: str) -> str | None:
+        try:
+            res = subprocess.run(
+                [name, "--version"],
+                capture_output=True, text=True, timeout=10,
+            )
+            if res.returncode == 0:
+                lines = (res.stdout or res.stderr).strip().split("\n")
+                return lines[0] if lines else None
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+            pass
+        return None
+
+    @classmethod
     def latex_dependencies(cls) -> dict[str, bool]:
         return {tool: _which(tool) for tool in cls.TOOLS}
 
     @classmethod
-    def preferred_backend(cls) -> tuple:
-        deps = cls.latex_dependencies()
-        if deps["latexmk"] and deps["perl"]:
-            return ("latexmk", "latexmk + perl disponibles")
-        if deps["pdflatex"]:
-            return ("pdflatex", "usando pdflatex (perl no disponible)")
-        return (None, "no se encontró latexmk ni pdflatex")
+    def available_compilers(cls) -> list[str]:
+        return [c for c in ("latexmk",) + COMPILER_ORDER if _which(c)]
 
     @classmethod
-    def available_compilers(cls) -> list[str]:
-        order = ["latexmk", "xelatex", "lualatex", "pdflatex"]
-        return [c for c in order if _which(c)]
+    def resolve_backend(cls, engine: str = "auto") -> tuple[str | None, str]:
+        """Resuelve el motor a usar. Devuelve (motor, mensaje) o (None, motivo).
+
+        - engine="auto": primer motor disponible de COMPILER_ORDER; si no hay
+          ninguno, latexmk+perl como último recurso.
+        - engine="latexmk": requiere latexmk + perl (modo avanzado).
+        - engine en COMPILER_ORDER: usa ese motor si está disponible.
+        """
+        engine = (engine or "auto").strip().lower()
+        deps = cls.latex_dependencies()
+
+        if engine in COMPILER_ORDER:
+            if deps.get(engine):
+                return engine, f"motor seleccionado: {_HUMAN_TOOL_NAMES[engine]}"
+            return None, f"{_HUMAN_TOOL_NAMES[engine]} no está instalado"
+
+        if engine == "latexmk":
+            if deps["latexmk"] and deps["perl"]:
+                return "latexmk", "latexmk + perl disponibles (modo avanzado)"
+            missing = [t for t in ("latexmk", "perl") if not deps[t]]
+            names = ", ".join(_HUMAN_TOOL_NAMES[t] for t in missing)
+            return None, f"el modo avanzado requiere {names}"
+
+        if engine not in ("auto", ""):
+            return None, f"motor desconocido: {engine}"
+
+        for name in COMPILER_ORDER:
+            if deps.get(name):
+                return name, f"automático: {_HUMAN_TOOL_NAMES[name]} seleccionado"
+        if deps["latexmk"] and deps["perl"]:
+            return "latexmk", "sin motores; último recurso: latexmk + perl"
+        return None, "no hay ningún motor de compilación disponible"
+
+    @classmethod
+    def preferred_backend(cls) -> tuple:
+        return cls.resolve_backend("auto")
 
     @classmethod
     def missing(cls) -> list[str]:
@@ -117,7 +169,8 @@ class EnvironmentChecker:
             ok = deps[tool]
             mark = "✓" if ok else "✗"
             name = _HUMAN_TOOL_NAMES.get(tool, tool)
-            lines.append(f"{mark} {name}: {'encontrado' if ok else 'no encontrado'}")
+            tag = " (opcional)" if tool in _OPTIONAL_TOOLS else ""
+            lines.append(f"{mark} {name}{tag}: {'encontrado' if ok else 'no encontrado'}")
         return "\n".join(lines)
 
     @classmethod
@@ -160,16 +213,16 @@ class EnvironmentChecker:
 
     @classmethod
     def ensure_compile_available(cls) -> str:
-        backend, _ = cls.preferred_backend()
+        backend, _ = cls.resolve_backend("auto")
         if backend is not None:
             return ""
         parts = [
             "No se puede compilar el PDF: no hay un motor de compilación disponible.",
-            "  Necesita latexmk+perl, o como mínimo pdflatex.",
+            "  Necesita al menos uno de: xelatex, lualatex, pdflatex (o latexmk+perl).",
             "",
             "Cómo instalar lo que falta:",
         ]
-        for tool in ("latexmk", "pdflatex"):
+        for tool in COMPILER_ORDER + ("kpsewhich",):
             if not _which(tool):
                 parts.append("  · " + _HINTS.get(tool, {}).get(_PLATFORM_KEY, f"Instale {tool}."))
         parts += ["", "Estado del entorno:", cls.status_report()]
@@ -233,4 +286,4 @@ class EnvironmentChecker:
 try:
     from md2tex import __version__
 except ImportError:
-    __version__ = "1.0.0"
+    __version__ = "1.1.0"

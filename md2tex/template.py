@@ -12,8 +12,15 @@ TEMPLATES_DIR = _templates_dir()
 
 BUILTIN = r"""\documentclass[12pt,a4paper]{article}
 
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
+\usepackage{iftex}
+
+\ifPDFTeX
+  \usepackage[utf8]{inputenc}
+  \usepackage[T1]{fontenc}
+\else
+  \usepackage{fontspec}
+\fi
+
 \usepackage[spanish]{babel}
 
 \usepackage{amsmath,amssymb}

@@ -25,6 +25,7 @@ which = EnvironmentChecker.which
 latex_dependencies = EnvironmentChecker.latex_dependencies
 status_report = EnvironmentChecker.status_report
 preferred_backend = EnvironmentChecker.preferred_backend
+resolve_backend = EnvironmentChecker.resolve_backend
 missing_dependencies = EnvironmentChecker.missing
 ensure_latex_dependencies = EnvironmentChecker.ensure_compile_available
 ensure_compile_available = EnvironmentChecker.ensure_compile_available
@@ -32,4 +33,4 @@ ensure_compile_available = EnvironmentChecker.ensure_compile_available
 try:
     from md2tex import __version__
 except ImportError:
-    __version__ = "1.0.0"
+    __version__ = "1.1.0"

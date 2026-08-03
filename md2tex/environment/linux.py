@@ -13,7 +13,7 @@ from .checker import EnvironmentChecker
 
 class LinuxEnvironment(EnvironmentBase):
     PLATFORM_KEY = "linux"
-    TOOLS = ("latexmk", "perl", "pdflatex", "xelatex", "lualatex", "kpsewhich")
+    TOOLS = ("xelatex", "lualatex", "pdflatex", "kpsewhich", "latexmk", "perl")
     PACKAGES = [
         "amsmath", "amssymb", "graphicx", "hyperref", "booktabs",
         "array", "xcolor", "listings", "geometry", "setspace", "babel",
@@ -78,10 +78,10 @@ class LinuxEnvironment(EnvironmentBase):
     def get_package_manager_hint(self, distro_id: str | None = None) -> str:
         pm = self.detect_package_manager()
         hints = {
-            "apt": "sudo apt update && sudo apt install -y texlive-full latexmk perl python3-tk",
-            "dnf": "sudo dnf install -y texlive-scheme-full latexmk perl python3-tk",
-            "pacman": "sudo pacman -S --noconfirm texlive-most perl tk",
-            "zypper": "sudo zypper install -y texlive-scheme-full latexmk perl",
+            "apt": "sudo apt update && sudo apt install -y texlive-latex-base texlive-xetex python3-tk",
+            "dnf": "sudo dnf install -y texlive-scheme-basic texlive-xetex python3-tk",
+            "pacman": "sudo pacman -S --noconfirm texlive-most python tk",
+            "zypper": "sudo zypper install -y texlive-scheme-basic texlive-xetex",
         }
         return hints.get(pm, "Instale LaTeX manualmente")
 
@@ -89,11 +89,11 @@ class LinuxEnvironment(EnvironmentBase):
         actions = []
         pm = self.detect_package_manager()
         if pm == "apt":
-            actions.append("Use: sudo apt update && sudo apt install -y texlive-latex-base texlive-latex-extra latexmk perl")
+            actions.append("Use: sudo apt update && sudo apt install -y texlive-latex-base texlive-xetex")
         elif pm == "dnf":
-            actions.append("Use: sudo dnf install -y texlive-collection-basic latexmk perl")
+            actions.append("Use: sudo dnf install -y texlive-scheme-basic texlive-xetex")
         elif pm == "pacman":
-            actions.append("Use: sudo pacman -S --noconfirm texlive-core latexmk perl")
+            actions.append("Use: sudo pacman -S --noconfirm texlive-core")
         else:
-            actions.append("Use su gestor de paquetes para instalar: texlive-latex-base, latexmk, perl")
+            actions.append("Use su gestor de paquetes para instalar: texlive-latex-base, texlive-xetex")
         return False, "Linux: requiere instalación manual", actions

@@ -21,7 +21,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt pyinstaller
       - name: Run tests
-        run: python -c "from md2tex.converter import parse, _render_block; t,f=parse('# Hola'); assert 'section' in _render_block(t,{},f); print('Tests OK')"
+        run: python -c "from md2tex.converter import parse, _render_block; t,f=parse('# Hola'); assert 'section' in _render_block(t,{},f); from md2tex.environment.checker import EnvironmentChecker, COMPILER_ORDER; assert COMPILER_ORDER == ('xelatex','lualatex','pdflatex'); assert isinstance(EnvironmentChecker.resolve_backend('auto'), tuple) and len(EnvironmentChecker.resolve_backend('auto')) == 2; print('Tests OK')"
       - name: Build binaries
         run: python build.py binaries
       - name: Build .deb installer
@@ -44,7 +44,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt pyinstaller
       - name: Run tests
-        run: python -c "from md2tex.converter import parse, _render_block; t,f=parse('# Hola'); assert 'section' in _render_block(t,{},f); print('Tests OK')"
+        run: python -c "from md2tex.converter import parse, _render_block; t,f=parse('# Hola'); assert 'section' in _render_block(t,{},f); from md2tex.environment.checker import EnvironmentChecker, COMPILER_ORDER; assert COMPILER_ORDER == ('xelatex','lualatex','pdflatex'); assert isinstance(EnvironmentChecker.resolve_backend('auto'), tuple) and len(EnvironmentChecker.resolve_backend('auto')) == 2; print('Tests OK')"
       - name: Code sign (optional)
         if: ${{ env.APPLE_DEVELOPER_ID != '' }}
         env:
@@ -73,7 +73,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt pyinstaller
       - name: Run tests
-        run: python -c "from md2tex.converter import parse, _render_block; t,f=parse('# Hola'); assert 'section' in _render_block(t,{},f); print('Tests OK')"
+        run: python -c "from md2tex.converter import parse, _render_block; t,f=parse('# Hola'); assert 'section' in _render_block(t,{},f); from md2tex.environment.checker import EnvironmentChecker, COMPILER_ORDER; assert COMPILER_ORDER == ('xelatex','lualatex','pdflatex'); assert isinstance(EnvironmentChecker.resolve_backend('auto'), tuple) and len(EnvironmentChecker.resolve_backend('auto')) == 2; print('Tests OK')"
       - name: Install Inno Setup
         run: choco install innosetup --no-progress
       - name: Build binaries

@@ -87,8 +87,27 @@ def main():
 
     title = questionary.text("Título del informe:", default=md_path.stem).ask()
     author = questionary.text("Autor:", default="").ask()
+    engine = questionary.select(
+        "Motor LaTeX:",
+        choices=[
+            "Automático (XeLaTeX → LuaLaTeX → pdfLaTeX)",
+            "XeLaTeX",
+            "LuaLaTeX",
+            "pdfLaTeX",
+            "latexmk (avanzado)",
+        ],
+        default="Automático (XeLaTeX → LuaLaTeX → pdfLaTeX)",
+    ).ask()
+    engine_map = {
+        "Automático (XeLaTeX → LuaLaTeX → pdfLaTeX)": "auto",
+        "XeLaTeX": "xelatex",
+        "LuaLaTeX": "lualatex",
+        "pdfLaTeX": "pdflatex",
+        "latexmk (avanzado)": "latexmk",
+    }
+    engine = engine_map.get(engine, "auto")
     compile_choice = questionary.confirm(
-        "¿Compilar con latexmk después de generar?",
+        "¿Compilar PDF después de generar?",
         default=True,
     ).ask()
 
@@ -126,7 +145,7 @@ def main():
         else:
             print("  Estado del entorno:")
             print("    " + status_report().replace("\n", "\n    "))
-            ok, cmsg = compile_pdf(out_path, out_dir)
+            ok, cmsg = compile_pdf(out_path, out_dir, engine=engine)
             print(f"  {cmsg}")
 
     print()

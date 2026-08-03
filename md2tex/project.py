@@ -14,6 +14,7 @@ class ProjectConfig:
     copy_images: bool = True
     compile_pdf: bool = True
     open_pdf: bool = False
+    engine: str = "auto"
 
     SAVE_FILE = ".md2tex_project.json"
 

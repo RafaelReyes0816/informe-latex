@@ -88,6 +88,26 @@ class ConfigPanel(ctk.CTkFrame):
         self.template_menu.grid(row=row, column=0, sticky="ew", pady=(0, 10))
         row += 1
 
+        ctk.CTkLabel(self, text="Motor LaTeX:", anchor="w").grid(
+            row=row, column=0, sticky="ew", pady=(0, 2)
+        )
+        row += 1
+        self._ENGINE_LABELS = {
+            "auto": "Automático",
+            "xelatex": "XeLaTeX",
+            "lualatex": "LuaLaTeX",
+            "pdflatex": "pdfLaTeX",
+            "latexmk": "latexmk (avanzado)",
+        }
+        self._ENGINE_VALUES = {v: k for k, v in self._ENGINE_LABELS.items()}
+        self.engine_var = ctk.StringVar(value="Automático")
+        self.engine_menu = ctk.CTkOptionMenu(
+            self, variable=self.engine_var,
+            values=list(self._ENGINE_LABELS.values()),
+        )
+        self.engine_menu.grid(row=row, column=0, sticky="ew", pady=(0, 10))
+        row += 1
+
         ctk.CTkLabel(self, text="Archivos .md:", anchor="w").grid(
             row=row, column=0, sticky="ew", pady=(0, 2)
         )
@@ -133,7 +153,7 @@ class ConfigPanel(ctk.CTkFrame):
 
         self.compile_var = ctk.BooleanVar(value=True)
         ctk.CTkCheckBox(
-            self, text="Compilar con latexmk", variable=self.compile_var
+            self, text="Compilar PDF al generar", variable=self.compile_var
         ).grid(row=row, column=0, sticky="w", pady=2)
         row += 1
 
@@ -194,12 +214,14 @@ class ConfigPanel(ctk.CTkFrame):
             copy_images=self.copy_var.get(),
             compile_pdf=self.compile_var.get(),
             open_pdf=self.open_var.get(),
+            engine=self._ENGINE_VALUES.get(self.engine_var.get(), "auto"),
         )
 
     def restore_config(self, cfg: ProjectConfig) -> None:
         self.title_entry.insert(0, cfg.title)
         self.author_entry.insert(0, cfg.author)
         self.template_var.set(cfg.template or "default")
+        self.engine_var.set(self._ENGINE_LABELS.get(cfg.engine, "Automático"))
         self.out_dir_var.set(cfg.output_dir or ".")
         self.copy_var.set(cfg.copy_images)
         self.compile_var.set(cfg.compile_pdf)
@@ -316,7 +338,8 @@ class ConfigPanel(ctk.CTkFrame):
         self._log("Estado del entorno:")
         self._log(status_report())
 
-        ok, cmsg = compile_pdf(tex_path)
+        engine = self._collect_config().engine
+        ok, cmsg = compile_pdf(tex_path, engine=engine)
         self._log(cmsg)
 
     def _log(self, msg: str) -> None:

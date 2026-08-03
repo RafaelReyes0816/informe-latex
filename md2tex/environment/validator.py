@@ -7,7 +7,8 @@ from .checker import EnvironmentChecker
 
 
 class EnvironmentValidator:
-    REQUIRED_TOOLS = ("latexmk", "perl", "pdflatex", "kpsewhich")
+    REQUIRED_TOOLS = ("xelatex", "lualatex", "pdflatex", "kpsewhich")
+    OPTIONAL_TOOLS = ("latexmk", "perl")
     REQUIRED_PACKAGES = [
         "amsmath", "amssymb", "graphicx", "hyperref", "booktabs",
         "array", "xcolor", "listings", "geometry", "setspace", "babel",
@@ -22,6 +23,11 @@ class EnvironmentValidator:
         permissions = EnvironmentChecker.check_permissions()
 
         missing_tools = [t for t in cls.REQUIRED_TOOLS if not tools.get(t)]
+        # Basta con UN motor disponible; no se exigen los tres.
+        engine_tools = ("xelatex", "lualatex", "pdflatex")
+        has_engine = any(tools.get(e) for e in engine_tools)
+        if has_engine:
+            missing_tools = [t for t in missing_tools if t not in engine_tools]
         missing_packages = (
             [p for p in cls.REQUIRED_PACKAGES if not packages.get(p)]
             if packages else []

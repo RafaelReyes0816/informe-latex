@@ -54,21 +54,36 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}
 
 [Code]
 const
-  // Update these URLs when new versions are published.
+  // Update this URL when a new version is published.
   // MiKTeX: check https://miktex.org/download  (section "Basic Installer 64-bit")
-  // Strawberry Perl: check https://strawberryperl.com/releases.html (64-bit MSI)
   MiKTeXUrl = 'https://miktex.org/download/ctan/systems/win32/miktex/setup/windows-x64/basic-miktex-25.12-x64.exe';
-  StrawberryMsiUrl = 'https://github.com/StrawberryPerl/Perl-Dist-Strawberry/releases/download/SP_54221_64bit/strawberry-perl-5.42.2.1-64bit.msi';
 
-function LatexmkAvailable(): Boolean;
+function LatexAvailable(): Boolean;
 var
   ResultCode: Integer;
 begin
+  // Any of the three native engines is enough; none of them needs Perl.
   Result := False;
-  if Exec('cmd.exe', '/c latexmk --version >nul 2>&1', '', SW_HIDE,
+  if Exec('cmd.exe', '/c pdflatex --version >nul 2>&1', '', SW_HIDE,
       ewWaitUntilTerminated, ResultCode) then
   begin
     Result := (ResultCode = 0);
+  end;
+  if not Result then
+  begin
+    if Exec('cmd.exe', '/c xelatex --version >nul 2>&1', '', SW_HIDE,
+        ewWaitUntilTerminated, ResultCode) then
+    begin
+      Result := (ResultCode = 0);
+    end;
+  end;
+  if not Result then
+  begin
+    if Exec('cmd.exe', '/c lualatex --version >nul 2>&1', '', SW_HIDE,
+        ewWaitUntilTerminated, ResultCode) then
+    begin
+      Result := (ResultCode = 0);
+    end;
   end;
 end;
 
@@ -117,7 +132,7 @@ begin
   if Exec(InstallerPath, '--unattended --private', '', SW_SHOW,
       ewWaitUntilTerminated, InstallResultCode) then
   begin
-    Result := (InstallResultCode = 0) or LatexmkAvailable();
+    Result := (InstallResultCode = 0) or LatexAvailable();
   end;
 
   if not Result then
@@ -128,62 +143,12 @@ begin
   end;
 end;
 
-function PerlAvailable(): Boolean;
-var
-  ResultCode: Integer;
-begin
-  Result := False;
-  if Exec('cmd.exe', '/c perl --version >nul 2>&1', '', SW_HIDE,
-      ewWaitUntilTerminated, ResultCode) then
-  begin
-    Result := (ResultCode = 0);
-  end;
-end;
-
-function InstallStrawberryPerl(): Boolean;
-var
-  InstallResultCode: Integer;
-  InstallerPath: string;
-begin
-  Result := False;
-  InstallerPath := ExpandConstant('{tmp}\strawberry-perl-x64.msi');
-
-  if not FileExists(InstallerPath) then
-  begin
-    MsgBox('Downloading Strawberry Perl (~200 MB). This can take a few minutes...',
-           mbInformation, MB_OK);
-    if not DownloadFile(StrawberryMsiUrl, InstallerPath) then
-    begin
-      MsgBox('Failed to download Strawberry Perl.' + #13#10 +
-             'You can install it later from https://strawberryperl.com',
-             mbError, MB_OK);
-      Exit;
-    end;
-  end;
-
-  MsgBox('Installing Strawberry Perl. Please wait...', mbInformation, MB_OK);
-  if Exec('msiexec.exe', '/i "' + InstallerPath + '" /quiet /norestart', '',
-      SW_SHOW, ewWaitUntilTerminated, InstallResultCode) then
-  begin
-    // msiexec returns 0/3010 on success; otherwise re-check perl directly.
-    Result := (InstallResultCode = 0) or (InstallResultCode = 3010) or
-              PerlAvailable();
-  end;
-
-  if not Result then
-  begin
-    MsgBox('Strawberry Perl installation did not complete successfully.' + #13#10 +
-           'You can install it manually from https://strawberryperl.com',
-           mbError, MB_OK);
-  end;
-end;
-
 function InitializeSetup(): Boolean;
 begin
-  // 1) LaTeX distribution (MiKTeX). Detect via pdflatex (native, reliable,
-  //    no Perl needed) so we don't re-trigger the install if MiKTeX is there
-  //    but Perl is still missing.
-  if not LatexmkAvailable() then
+  // LaTeX distribution (MiKTeX). Detect any of pdflatex / xelatex / lualatex
+  // so we don't re-trigger the install if LaTeX is already present. None of
+  // the three engines needs Perl, so Strawberry Perl is no longer installed.
+  if not LatexAvailable() then
   begin
     if MsgBox('md2tex needs a LaTeX distribution (MiKTeX) to compile PDFs, ' +
               'but it was not found on this system.' + #13#10 + #13#10 +
@@ -191,21 +156,6 @@ begin
               mbConfirmation, MB_YESNO) = IDYES then
     begin
       InstallMiKTeX();
-    end;
-  end;
-
-  // 2) Perl interpreter (latexmk needs it, but md2tex can also fall back to
-  //    pdflatex if Perl is missing). Offer best-effort silent install so the
-  //    preferred latexmk path works; if it fails, the app still compiles via
-  //    the pdflatex fallback.
-  if LatexmkAvailable() and not PerlAvailable() then
-  begin
-    if MsgBox('latexmk needs Perl to run, but it was not found on this system.' + #13#10 +
-              'Do you want to download and install Strawberry Perl now? (~200 MB)' + #13#10 +
-              '(Optional: md2tex can also compile with pdflatex if you skip this.)',
-              mbConfirmation, MB_YESNO) = IDYES then
-    begin
-      InstallStrawberryPerl();
     end;
   end;
 

@@ -13,7 +13,7 @@ from .checker import EnvironmentChecker
 
 class MacOSEnvironment(EnvironmentBase):
     PLATFORM_KEY = "macos"
-    TOOLS = ("latexmk", "perl", "pdflatex", "xelatex", "lualatex", "kpsewhich")
+    TOOLS = ("xelatex", "lualatex", "pdflatex", "kpsewhich", "latexmk", "perl")
     PACKAGES = [
         "amsmath", "amssymb", "graphicx", "hyperref", "booktabs",
         "array", "xcolor", "listings", "geometry", "setspace", "babel",
