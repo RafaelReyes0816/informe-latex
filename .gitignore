@@ -26,3 +26,8 @@ dist/
 *.pdf
 !examples/*.pdf
 figures/
+
+# Documentación de trabajo (specs, planes, reportes) — no va al repo
+/*.md
+!README.md
+!AGENTS.md
