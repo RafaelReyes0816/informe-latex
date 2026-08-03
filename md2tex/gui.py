@@ -437,18 +437,12 @@ class App(ctk.CTk):
             self.config_panel._preview_first_file()
 
     def _setup_menubar(self) -> None:
-        menubar = ctk.CTkMenuBar(self)
+        from tkinter import Menu as TkMenu
+        menubar = TkMenu(self)
         self.configure(menu=menubar)
 
-        tools_menu = ctk.CTkMenu(menubar, tearoff=0)
-        menu_btn = ctk.CTkButton(
-            menubar, text="Herramientas",
-            command=lambda: tools_menu.tk_popup(
-                self.winfo_pointerx(), self.winfo_pointery() + 30
-            )
-        )
-        menu_btn.pack(side="left", padx=0, pady=0)
-
+        tools_menu = TkMenu(menubar, tearoff=0)
+        menubar.add_cascade(label="Herramientas", menu=tools_menu)
         tools_menu.add_command(label="Diagnóstico del entorno", command=self._run_diagnosis)
         tools_menu.add_command(label="Reparar entorno", command=self._run_repair)
         tools_menu.add_separator()
